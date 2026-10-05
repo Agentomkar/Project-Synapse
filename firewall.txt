@@ -1,0 +1,118 @@
+!
+! ================================================================
+! SYNAPSE — Firewall (ASA 5506-X or 2911 Router as stand-in)
+! Role: Perimeter firewall + dual-ISP + NAT + ACLs
+! 
+! NOTE: Packet Tracer's ASA is limited. For a cleaner demo,
+! use a 2911 router with ACLs — same logical functionality.
+! ================================================================
+!
+enable
+configure terminal
+!
+hostname FW
+no ip domain-lookup
+service password-encryption
+enable secret SynapseFW2026!
+!
+! --- Interfaces ---
+interface GigabitEthernet0/0
+ description Primary uplink to Core-SW-1
+ ip address 10.0.0.1 255.255.255.252
+ ip nat inside
+ no shutdown
+!
+interface GigabitEthernet0/1
+ description Backup uplink to Core-SW-2
+ ip address 10.0.0.5 255.255.255.252
+ ip nat inside
+ no shutdown
+!
+interface GigabitEthernet1/0
+ description To ISP-1
+ ip address 203.0.113.2 255.255.255.252
+ ip nat outside
+ no shutdown
+!
+interface GigabitEthernet1/1
+ description To ISP-2
+ ip address 198.51.100.2 255.255.255.252
+ ip nat outside
+ no shutdown
+!
+! --- Static routes to internal VLANs (via Core-SW-1 primary) ---
+ip route 10.10.0.0 255.255.255.0 10.0.0.2
+ip route 10.20.0.0 255.255.255.0 10.0.0.2
+ip route 10.30.0.0 255.255.255.0 10.0.0.2
+ip route 10.40.0.0 255.255.255.0 10.0.0.2
+ip route 10.50.0.0 255.255.255.0 10.0.0.2
+ip route 10.60.0.0 255.255.255.0 10.0.0.2
+ip route 10.70.0.0 255.255.255.0 10.0.0.2
+ip route 10.80.0.0 255.255.255.0 10.0.0.2
+ip route 10.99.0.0 255.255.255.0 10.0.0.2
+!
+! Floating static routes via Core-SW-2 (higher admin distance = backup)
+ip route 10.10.0.0 255.255.255.0 10.0.0.6 10
+ip route 10.20.0.0 255.255.255.0 10.0.0.6 10
+ip route 10.30.0.0 255.255.255.0 10.0.0.6 10
+ip route 10.40.0.0 255.255.255.0 10.0.0.6 10
+ip route 10.50.0.0 255.255.255.0 10.0.0.6 10
+ip route 10.60.0.0 255.255.255.0 10.0.0.6 10
+ip route 10.70.0.0 255.255.255.0 10.0.0.6 10
+ip route 10.80.0.0 255.255.255.0 10.0.0.6 10
+ip route 10.99.0.0 255.255.255.0 10.0.0.6 10
+!
+! --- Default routes to both ISPs (primary + backup) ---
+ip route 0.0.0.0 0.0.0.0 203.0.113.1
+ip route 0.0.0.0 0.0.0.0 198.51.100.1 20
+!
+! --- NAT (PAT - overload) for internet access ---
+access-list 1 permit 10.0.0.0 0.255.255.255
+ip nat inside source list 1 interface GigabitEthernet1/0 overload
+!
+! --- Perimeter ACL: block inbound threats ---
+ip access-list extended INBOUND_PERIMETER
+ ! Allow return traffic
+ permit tcp any any established
+ ! Allow web (if hosting public server)
+ permit tcp any any eq 80
+ permit tcp any any eq 443
+ ! Block common attack ports
+ deny tcp any any eq 23      ! Telnet
+ deny tcp any any eq 445     ! SMB
+ deny tcp any any eq 3389    ! RDP
+ deny ip any any
+!
+interface GigabitEthernet1/0
+ ip access-group INBOUND_PERIMETER in
+!
+interface GigabitEthernet1/1
+ ip access-group INBOUND_PERIMETER in
+!
+! --- Outbound: Block Guest VLAN from certain destinations ---
+ip access-list extended OUTBOUND_FILTER
+ deny tcp 10.80.0.0 0.0.0.255 any eq 22
+ deny tcp 10.80.0.0 0.0.0.255 any eq 25
+ permit ip any any
+!
+interface GigabitEthernet0/0
+ ip access-group OUTBOUND_FILTER in
+!
+! --- SSH access (admin only, from VLAN 10) ---
+username admin privilege 15 secret SynapseAdmin2026!
+line vty 0 4
+ login local
+ transport input ssh
+ access-class 10 in
+!
+access-list 10 permit 10.10.0.0 0.0.0.255
+access-list 10 deny any
+!
+end
+write memory
+!
+! Verification:
+!   show ip route
+!   show ip nat translations
+!   show access-lists
+!

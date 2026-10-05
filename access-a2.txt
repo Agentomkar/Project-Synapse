@@ -1,0 +1,62 @@
+!
+! ================================================================
+! SYNAPSE — Access-A2 (Faculty)
+! VLAN: 20 (Faculty)
+! ================================================================
+!
+enable
+configure terminal
+!
+hostname Access-A2
+no ip domain-lookup
+enable secret SynapseAccess2026!
+!
+vtp mode transparent
+!
+vlan 20
+ name FACULTY
+vlan 99
+ name MGMT
+exit
+!
+interface FastEthernet0/1
+ description Uplink to Dist-SW-A
+ switchport mode trunk
+ switchport trunk allowed vlan 20,99
+ no shutdown
+!
+interface range FastEthernet0/5-20
+ description Faculty port
+ switchport mode access
+ switchport access vlan 20
+ switchport port-security
+ switchport port-security maximum 3
+ switchport port-security violation restrict
+ switchport port-security mac-address sticky
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+ no shutdown
+!
+interface range FastEthernet0/2-4
+ shutdown
+!
+interface range FastEthernet0/21-24
+ shutdown
+!
+ip dhcp snooping
+ip dhcp snooping vlan 20
+no ip dhcp snooping information option
+interface FastEthernet0/1
+ ip dhcp snooping trust
+!
+ip arp inspection vlan 20
+!
+interface Vlan99
+ ip address 10.99.0.21 255.255.255.0
+ no shutdown
+!
+ip default-gateway 10.99.0.1
+spanning-tree mode rapid-pvst
+!
+end
+write memory

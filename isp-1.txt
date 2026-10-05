@@ -1,0 +1,30 @@
+!
+! ================================================================
+! SYNAPSE — ISP-1 (Primary Internet Service Provider)
+! Model: Cisco 1941 Router
+! ================================================================
+!
+enable
+configure terminal
+!
+hostname ISP-1
+no ip domain-lookup
+service password-encryption
+enable secret ISP1Pass2026!
+!
+! --- Interface to Firewall ---
+interface GigabitEthernet0/0
+ description Link to SYNAPSE Firewall
+ ip address 203.0.113.1 255.255.255.252
+ no shutdown
+!
+! --- Loopback simulating "the internet" ---
+interface Loopback0
+ description Simulated Internet
+ ip address 8.8.8.8 255.255.255.255
+!
+! --- Static route back to customer ---
+ip route 0.0.0.0 0.0.0.0 203.0.113.2
+!
+end
+write memory

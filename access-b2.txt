@@ -1,0 +1,66 @@
+!
+! ================================================================
+! SYNAPSE — Access-B2 (Exam terminals)
+! VLAN: 70 (Online Exams) — HIGHEST security
+! ================================================================
+!
+enable
+configure terminal
+!
+hostname Access-B2
+no ip domain-lookup
+enable secret SynapseAccess2026!
+!
+vtp mode transparent
+!
+vlan 70
+ name EXAM
+vlan 99
+ name MGMT
+exit
+!
+interface FastEthernet0/1
+ description Uplink to Dist-SW-B
+ switchport mode trunk
+ switchport trunk allowed vlan 70,99
+ no shutdown
+!
+! Exam terminal ports - EXACTLY 1 MAC per port (sticky), violation shutdown
+interface range FastEthernet0/5-20
+ description Exam terminal
+ switchport mode access
+ switchport access vlan 70
+ switchport port-security
+ switchport port-security maximum 1
+ switchport port-security violation shutdown
+ switchport port-security mac-address sticky
+ switchport port-security aging time 2
+ switchport port-security aging type inactivity
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+ storm-control broadcast level 0.50
+ no shutdown
+!
+interface range FastEthernet0/2-4
+ shutdown
+!
+interface range FastEthernet0/21-24
+ shutdown
+!
+ip dhcp snooping
+ip dhcp snooping vlan 70
+no ip dhcp snooping information option
+interface FastEthernet0/1
+ ip dhcp snooping trust
+!
+ip arp inspection vlan 70
+!
+interface Vlan99
+ ip address 10.99.0.23 255.255.255.0
+ no shutdown
+!
+ip default-gateway 10.99.0.1
+spanning-tree mode rapid-pvst
+!
+end
+write memory
