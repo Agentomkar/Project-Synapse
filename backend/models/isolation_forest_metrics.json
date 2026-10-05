@@ -1,0 +1,26 @@
+{
+  "model": "IsolationForest",
+  "accuracy": 0.9073,
+  "precision": 0.495,
+  "recall": 1.0,
+  "f1_score": 0.6623,
+  "false_positive_rate": 0.102,
+  "confusion_matrix": {
+    "TN": 898,
+    "FP": 102,
+    "FN": 0,
+    "TP": 100
+  },
+  "features": [
+    "flow_duration_ms",
+    "packet_count",
+    "avg_packet_size",
+    "bytes_per_sec",
+    "packets_per_sec",
+    "tcp_flag_count",
+    "unique_dst_ports",
+    "inter_arrival_std"
+  ],
+  "training_samples": 4000,
+  "test_samples": 1100
+}
