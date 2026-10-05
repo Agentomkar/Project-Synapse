@@ -1,0 +1,64 @@
+!
+! ================================================================
+! SYNAPSE — Dist-SW-B (Academic Building)
+! Carries VLANs: 30 (Student), 40 (Classroom), 70 (Exam), 99 (Mgmt)
+! ================================================================
+!
+enable
+configure terminal
+!
+hostname Dist-SW-B
+no ip domain-lookup
+service password-encryption
+enable secret SynapseDist2026!
+!
+vtp mode transparent
+!
+vlan 30
+ name STUDENT
+vlan 40
+ name CLASSROOM
+vlan 70
+ name EXAM
+vlan 99
+ name MGMT
+exit
+!
+interface GigabitEthernet0/1
+ description Uplink to Core-SW-1
+ switchport mode trunk
+ switchport trunk allowed vlan 30,40,70,99
+ no shutdown
+!
+interface GigabitEthernet0/2
+ description Uplink to Core-SW-2 (redundant)
+ switchport mode trunk
+ switchport trunk allowed vlan 30,40,70,99
+ no shutdown
+!
+interface FastEthernet0/1
+ description To Access-B1 (Students + Classroom)
+ switchport mode trunk
+ switchport trunk allowed vlan 30,40,99
+ no shutdown
+!
+interface FastEthernet0/2
+ description To Access-B2 (Exam terminals)
+ switchport mode trunk
+ switchport trunk allowed vlan 70,99
+ no shutdown
+!
+interface range FastEthernet0/3-24
+ shutdown
+!
+interface Vlan99
+ ip address 10.99.0.11 255.255.255.0
+ no shutdown
+!
+ip default-gateway 10.99.0.1
+!
+spanning-tree mode rapid-pvst
+spanning-tree portfast bpduguard default
+!
+end
+write memory

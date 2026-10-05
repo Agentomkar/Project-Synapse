@@ -1,0 +1,76 @@
+!
+! ================================================================
+! SYNAPSE — Access-C1 (CCTV + IoT Lab)
+! VLANs: 50 (CCTV), 60 (IoT)
+! ================================================================
+!
+enable
+configure terminal
+!
+hostname Access-C1
+no ip domain-lookup
+enable secret SynapseAccess2026!
+!
+vtp mode transparent
+!
+vlan 50
+ name CCTV
+vlan 60
+ name IOT
+vlan 99
+ name MGMT
+exit
+!
+interface FastEthernet0/1
+ description Uplink to Dist-SW-C
+ switchport mode trunk
+ switchport trunk allowed vlan 50,60,99
+ no shutdown
+!
+! CCTV cameras (1 MAC each, sticky)
+interface range FastEthernet0/5-14
+ description CCTV camera
+ switchport mode access
+ switchport access vlan 50
+ switchport port-security
+ switchport port-security maximum 1
+ switchport port-security violation shutdown
+ switchport port-security mac-address sticky
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+ no shutdown
+!
+! IoT sensors
+interface range FastEthernet0/15-20
+ description IoT sensor
+ switchport mode access
+ switchport access vlan 60
+ switchport port-security
+ switchport port-security maximum 1
+ switchport port-security violation restrict
+ switchport port-security mac-address sticky
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+ no shutdown
+!
+interface range FastEthernet0/2-4
+ shutdown
+!
+interface range FastEthernet0/21-24
+ shutdown
+!
+ip dhcp snooping
+ip dhcp snooping vlan 50,60
+no ip dhcp snooping information option
+interface FastEthernet0/1
+ ip dhcp snooping trust
+!
+interface Vlan99
+ ip address 10.99.0.24 255.255.255.0
+ no shutdown
+!
+ip default-gateway 10.99.0.1
+spanning-tree mode rapid-pvst
+!
+end
+write memory

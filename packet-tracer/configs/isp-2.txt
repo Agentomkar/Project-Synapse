@@ -1,0 +1,27 @@
+!
+! ================================================================
+! SYNAPSE — ISP-2 (Backup Internet Service Provider)
+! Model: Cisco 1941 Router
+! ================================================================
+!
+enable
+configure terminal
+!
+hostname ISP-2
+no ip domain-lookup
+service password-encryption
+enable secret ISP2Pass2026!
+!
+interface GigabitEthernet0/0
+ description Backup link to SYNAPSE Firewall
+ ip address 198.51.100.1 255.255.255.252
+ no shutdown
+!
+interface Loopback0
+ description Simulated Internet (ISP-2)
+ ip address 1.1.1.1 255.255.255.255
+!
+ip route 0.0.0.0 0.0.0.0 198.51.100.2
+!
+end
+write memory

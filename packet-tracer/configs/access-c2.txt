@@ -1,0 +1,61 @@
+!
+! ================================================================
+! SYNAPSE — Access-C2 (Guest Wi-Fi)
+! VLAN: 80 (Guest - isolated)
+! ================================================================
+!
+enable
+configure terminal
+!
+hostname Access-C2
+no ip domain-lookup
+enable secret SynapseAccess2026!
+!
+vtp mode transparent
+!
+vlan 80
+ name GUEST
+vlan 99
+ name MGMT
+exit
+!
+interface FastEthernet0/1
+ description Uplink to Dist-SW-C
+ switchport mode trunk
+ switchport trunk allowed vlan 80,99
+ no shutdown
+!
+! Guest Wi-Fi APs
+interface range FastEthernet0/5-20
+ description Guest Wi-Fi AP
+ switchport mode access
+ switchport access vlan 80
+ switchport port-security
+ switchport port-security maximum 50
+ switchport port-security violation restrict
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+ storm-control broadcast level 2.00
+ no shutdown
+!
+interface range FastEthernet0/2-4
+ shutdown
+!
+interface range FastEthernet0/21-24
+ shutdown
+!
+ip dhcp snooping
+ip dhcp snooping vlan 80
+no ip dhcp snooping information option
+interface FastEthernet0/1
+ ip dhcp snooping trust
+!
+interface Vlan99
+ ip address 10.99.0.25 255.255.255.0
+ no shutdown
+!
+ip default-gateway 10.99.0.1
+spanning-tree mode rapid-pvst
+!
+end
+write memory

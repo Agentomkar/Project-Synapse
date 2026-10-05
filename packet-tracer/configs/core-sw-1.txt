@@ -1,0 +1,242 @@
+!
+! ================================================================
+! SYNAPSE — Core-SW-1 (L3, HSRP Active)
+! Model: Cisco Catalyst 3650-24PS
+! Role: Primary core, inter-VLAN routing, HSRP active
+! ================================================================
+!
+enable
+configure terminal
+!
+hostname Core-SW-1
+no ip domain-lookup
+service password-encryption
+enable secret SynapseCore2026!
+!
+! --- VTP Transparent (we define VLANs manually) ---
+vtp mode transparent
+!
+! --- Define all VLANs ---
+vlan 10
+ name ADMIN
+vlan 20
+ name FACULTY
+vlan 30
+ name STUDENT
+vlan 40
+ name CLASSROOM
+vlan 50
+ name CCTV
+vlan 60
+ name IOT
+vlan 70
+ name EXAM
+vlan 80
+ name GUEST
+vlan 99
+ name MGMT
+exit
+!
+! --- SVI (Switch Virtual Interface) for each VLAN with HSRP ---
+interface Vlan10
+ ip address 10.10.0.2 255.255.255.0
+ standby 10 ip 10.10.0.1
+ standby 10 priority 110
+ standby 10 preempt
+ no shutdown
+!
+interface Vlan20
+ ip address 10.20.0.2 255.255.255.0
+ standby 20 ip 10.20.0.1
+ standby 20 priority 110
+ standby 20 preempt
+ no shutdown
+!
+interface Vlan30
+ ip address 10.30.0.2 255.255.255.0
+ standby 30 ip 10.30.0.1
+ standby 30 priority 110
+ standby 30 preempt
+ no shutdown
+!
+interface Vlan40
+ ip address 10.40.0.2 255.255.255.0
+ standby 40 ip 10.40.0.1
+ standby 40 priority 110
+ standby 40 preempt
+ no shutdown
+!
+interface Vlan50
+ ip address 10.50.0.2 255.255.255.0
+ standby 50 ip 10.50.0.1
+ standby 50 priority 110
+ standby 50 preempt
+ no shutdown
+!
+interface Vlan60
+ ip address 10.60.0.2 255.255.255.0
+ standby 60 ip 10.60.0.1
+ standby 60 priority 110
+ standby 60 preempt
+ no shutdown
+!
+interface Vlan70
+ ip address 10.70.0.2 255.255.255.0
+ standby 70 ip 10.70.0.1
+ standby 70 priority 110
+ standby 70 preempt
+ no shutdown
+!
+interface Vlan80
+ ip address 10.80.0.2 255.255.255.0
+ standby 80 ip 10.80.0.1
+ standby 80 priority 110
+ standby 80 preempt
+ no shutdown
+!
+interface Vlan99
+ ip address 10.99.0.2 255.255.255.0
+ standby 99 ip 10.99.0.1
+ standby 99 priority 110
+ standby 99 preempt
+ no shutdown
+!
+! --- Core-to-Core link (trunk) ---
+interface GigabitEthernet0/1
+ description Link to Core-SW-2
+ switchport trunk encapsulation dot1q
+ switchport mode trunk
+ switchport trunk allowed vlan 10,20,30,40,50,60,70,80,99
+ no shutdown
+!
+! --- Uplink to Firewall (routed point-to-point) ---
+interface GigabitEthernet0/2
+ description Uplink to Firewall
+ no switchport
+ ip address 10.0.0.2 255.255.255.252
+ no shutdown
+!
+! --- Downlinks to Distribution Switches (trunks) ---
+interface GigabitEthernet0/3
+ description To Dist-SW-A
+ switchport trunk encapsulation dot1q
+ switchport mode trunk
+ switchport trunk allowed vlan 10,20,99
+ no shutdown
+!
+interface GigabitEthernet0/4
+ description To Dist-SW-B
+ switchport trunk encapsulation dot1q
+ switchport mode trunk
+ switchport trunk allowed vlan 30,40,70,99
+ no shutdown
+!
+interface GigabitEthernet0/5
+ description To Dist-SW-C
+ switchport trunk encapsulation dot1q
+ switchport mode trunk
+ switchport trunk allowed vlan 50,60,80,99
+ no shutdown
+!
+! --- Routing: Default route to firewall ---
+ip routing
+ip route 0.0.0.0 0.0.0.0 10.0.0.1
+!
+! --- ACLs: Inter-VLAN restrictions ---
+! Deny Guest from reaching internal VLANs
+ip access-list extended GUEST_ISOLATION
+ deny ip 10.80.0.0 0.0.0.255 10.0.0.0 0.255.255.255
+ permit ip any any
+!
+! Deny Student from reaching Admin/ERP
+ip access-list extended STUDENT_ISOLATION
+ deny ip 10.30.0.0 0.0.0.255 10.10.0.0 0.0.0.255
+ deny ip 10.30.0.0 0.0.0.255 10.20.0.0 0.0.0.255
+ permit ip any any
+!
+! CCTV: no internet (only to NVR server which we assume is in VLAN 99)
+ip access-list extended CCTV_LOCKDOWN
+ permit ip 10.50.0.0 0.0.0.255 10.99.0.0 0.0.0.255
+ deny ip 10.50.0.0 0.0.0.255 any
+!
+! Exam VLAN: whitelist only
+ip access-list extended EXAM_WHITELIST
+ permit ip 10.70.0.0 0.0.0.255 10.99.0.0 0.0.0.255
+ permit tcp 10.70.0.0 0.0.0.255 any eq 443
+ deny ip 10.70.0.0 0.0.0.255 any
+!
+interface Vlan30
+ ip access-group STUDENT_ISOLATION in
+!
+interface Vlan50
+ ip access-group CCTV_LOCKDOWN in
+!
+interface Vlan70
+ ip access-group EXAM_WHITELIST in
+!
+interface Vlan80
+ ip access-group GUEST_ISOLATION in
+!
+! --- DHCP excluded addresses ---
+ip dhcp excluded-address 10.10.0.1 10.10.0.49
+ip dhcp excluded-address 10.20.0.1 10.20.0.49
+ip dhcp excluded-address 10.30.0.1 10.30.0.99
+ip dhcp excluded-address 10.40.0.1 10.40.0.49
+ip dhcp excluded-address 10.50.0.1 10.50.0.49
+ip dhcp excluded-address 10.60.0.1 10.60.0.49
+ip dhcp excluded-address 10.70.0.1 10.70.0.49
+ip dhcp excluded-address 10.80.0.1 10.80.0.49
+ip dhcp excluded-address 10.99.0.1 10.99.0.99
+!
+! --- DHCP pools ---
+ip dhcp pool ADMIN_POOL
+ network 10.10.0.0 255.255.255.0
+ default-router 10.10.0.1
+ dns-server 8.8.8.8
+!
+ip dhcp pool FACULTY_POOL
+ network 10.20.0.0 255.255.255.0
+ default-router 10.20.0.1
+ dns-server 8.8.8.8
+!
+ip dhcp pool STUDENT_POOL
+ network 10.30.0.0 255.255.255.0
+ default-router 10.30.0.1
+ dns-server 8.8.8.8
+!
+ip dhcp pool CLASSROOM_POOL
+ network 10.40.0.0 255.255.255.0
+ default-router 10.40.0.1
+ dns-server 8.8.8.8
+!
+ip dhcp pool CCTV_POOL
+ network 10.50.0.0 255.255.255.0
+ default-router 10.50.0.1
+!
+ip dhcp pool IOT_POOL
+ network 10.60.0.0 255.255.255.0
+ default-router 10.60.0.1
+!
+ip dhcp pool EXAM_POOL
+ network 10.70.0.0 255.255.255.0
+ default-router 10.70.0.1
+ dns-server 8.8.8.8
+!
+ip dhcp pool GUEST_POOL
+ network 10.80.0.0 255.255.255.0
+ default-router 10.80.0.1
+ dns-server 8.8.8.8
+ lease 0 2 0
+!
+! --- Save ---
+end
+write memory
+!
+! ================================================================
+! Verification commands (run after boot):
+!   show vlan brief
+!   show standby brief
+!   show ip interface brief
+!   show ip route
+!   show access-lists
+! ================================================================

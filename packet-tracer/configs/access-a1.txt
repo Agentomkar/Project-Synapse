@@ -1,0 +1,79 @@
+!
+! ================================================================
+! SYNAPSE — Access-A1 (Admin devices)
+! VLAN: 10 (Admin/ERP)
+! Security: port security, DHCP snooping, DAI, BPDU guard, storm control
+! ================================================================
+!
+enable
+configure terminal
+!
+hostname Access-A1
+no ip domain-lookup
+service password-encryption
+enable secret SynapseAccess2026!
+!
+vtp mode transparent
+!
+vlan 10
+ name ADMIN
+vlan 99
+ name MGMT
+exit
+!
+! Uplink to Dist-SW-A
+interface FastEthernet0/1
+ description Uplink to Dist-SW-A
+ switchport mode trunk
+ switchport trunk allowed vlan 10,99
+ no shutdown
+!
+! Access ports for Admin PCs
+interface range FastEthernet0/5-20
+ description Admin device port
+ switchport mode access
+ switchport access vlan 10
+ switchport port-security
+ switchport port-security maximum 2
+ switchport port-security violation restrict
+ switchport port-security mac-address sticky
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+ storm-control broadcast level 1.00
+ storm-control multicast level 1.00
+ no shutdown
+!
+! Shutdown unused ports (security best practice)
+interface range FastEthernet0/2-4
+ shutdown
+!
+interface range FastEthernet0/21-24
+ shutdown
+!
+! --- L2 security: DHCP snooping + DAI ---
+ip dhcp snooping
+ip dhcp snooping vlan 10
+no ip dhcp snooping information option
+!
+interface FastEthernet0/1
+ ip dhcp snooping trust
+!
+ip arp inspection vlan 10
+!
+! --- Management ---
+interface Vlan99
+ ip address 10.99.0.20 255.255.255.0
+ no shutdown
+!
+ip default-gateway 10.99.0.1
+!
+spanning-tree mode rapid-pvst
+!
+end
+write memory
+!
+! Verification:
+!   show port-security
+!   show ip dhcp snooping
+!   show ip arp inspection
+!

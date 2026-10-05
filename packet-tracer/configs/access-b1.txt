@@ -1,0 +1,75 @@
+!
+! ================================================================
+! SYNAPSE — Access-B1 (Students + Classrooms)
+! VLANs: 30 (Student Wi-Fi), 40 (Classroom)
+! ================================================================
+!
+enable
+configure terminal
+!
+hostname Access-B1
+no ip domain-lookup
+enable secret SynapseAccess2026!
+!
+vtp mode transparent
+!
+vlan 30
+ name STUDENT
+vlan 40
+ name CLASSROOM
+vlan 99
+ name MGMT
+exit
+!
+interface FastEthernet0/1
+ description Uplink to Dist-SW-B
+ switchport mode trunk
+ switchport trunk allowed vlan 30,40,99
+ no shutdown
+!
+! Student Wi-Fi ports (would connect to Wireless APs in real world)
+interface range FastEthernet0/5-10
+ description Student Wi-Fi AP
+ switchport mode access
+ switchport access vlan 30
+ switchport port-security
+ switchport port-security maximum 50
+ switchport port-security violation restrict
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+ no shutdown
+!
+! Classroom devices (projectors, smart boards)
+interface range FastEthernet0/11-20
+ description Classroom device
+ switchport mode access
+ switchport access vlan 40
+ switchport port-security
+ switchport port-security maximum 2
+ switchport port-security violation restrict
+ switchport port-security mac-address sticky
+ spanning-tree portfast
+ spanning-tree bpduguard enable
+ no shutdown
+!
+interface range FastEthernet0/2-4
+ shutdown
+!
+interface range FastEthernet0/21-24
+ shutdown
+!
+ip dhcp snooping
+ip dhcp snooping vlan 30,40
+no ip dhcp snooping information option
+interface FastEthernet0/1
+ ip dhcp snooping trust
+!
+interface Vlan99
+ ip address 10.99.0.22 255.255.255.0
+ no shutdown
+!
+ip default-gateway 10.99.0.1
+spanning-tree mode rapid-pvst
+!
+end
+write memory

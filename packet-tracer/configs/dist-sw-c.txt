@@ -1,0 +1,64 @@
+!
+! ================================================================
+! SYNAPSE — Dist-SW-C (Lab / Surveillance Block)
+! Carries VLANs: 50 (CCTV), 60 (IoT), 80 (Guest), 99 (Mgmt)
+! ================================================================
+!
+enable
+configure terminal
+!
+hostname Dist-SW-C
+no ip domain-lookup
+service password-encryption
+enable secret SynapseDist2026!
+!
+vtp mode transparent
+!
+vlan 50
+ name CCTV
+vlan 60
+ name IOT
+vlan 80
+ name GUEST
+vlan 99
+ name MGMT
+exit
+!
+interface GigabitEthernet0/1
+ description Uplink to Core-SW-1
+ switchport mode trunk
+ switchport trunk allowed vlan 50,60,80,99
+ no shutdown
+!
+interface GigabitEthernet0/2
+ description Uplink to Core-SW-2 (redundant)
+ switchport mode trunk
+ switchport trunk allowed vlan 50,60,80,99
+ no shutdown
+!
+interface FastEthernet0/1
+ description To Access-C1 (CCTV + IoT)
+ switchport mode trunk
+ switchport trunk allowed vlan 50,60,99
+ no shutdown
+!
+interface FastEthernet0/2
+ description To Access-C2 (Guest)
+ switchport mode trunk
+ switchport trunk allowed vlan 80,99
+ no shutdown
+!
+interface range FastEthernet0/3-24
+ shutdown
+!
+interface Vlan99
+ ip address 10.99.0.12 255.255.255.0
+ no shutdown
+!
+ip default-gateway 10.99.0.1
+!
+spanning-tree mode rapid-pvst
+spanning-tree portfast bpduguard default
+!
+end
+write memory
